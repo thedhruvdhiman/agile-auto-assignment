@@ -164,7 +164,7 @@ const fetchData = async () => {
   }
 };
 
-// Initial run
+// npm run start all "AI automation"
 (async () => {
   if (!fs.existsSync(REPORT_DIR)) {
     fs.mkdirSync(REPORT_DIR, { recursive: true });
