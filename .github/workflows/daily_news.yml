@@ -19,7 +19,7 @@ on:
         description: "Topic to search"
         required: true
         type: string
-        default: "AI automation"
+        default: "Dogs"
 
 permissions:
   contents: write
