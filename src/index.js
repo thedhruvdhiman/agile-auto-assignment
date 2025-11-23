@@ -55,6 +55,9 @@ const fetchReddit = async (keyword) => {
   try {
     const response = await axios.get(SOURCES.reddit, {
       params: { q: keyword, sort: "new" },
+      headers: {
+        "User-Agent": "node:data_aggregation:v1.0.0",
+      },
     });
     return response.data.data.children.map((item) => ({
       Source: "Reddit",
@@ -73,6 +76,9 @@ const fetchHackerNews = async (keyword) => {
   try {
     const response = await axios.get(SOURCES.hackerNews, {
       params: { query: keyword, tags: "story" },
+      headers: {
+        "User-Agent": "node:data_aggregation:v1.0.0",
+      },
     });
     return response.data.hits.map((item) => ({
       Source: "Hacker News",
