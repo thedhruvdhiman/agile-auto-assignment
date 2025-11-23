@@ -3,6 +3,7 @@ const csv = require("fast-csv");
 const fs = require("fs");
 const path = require("path");
 const Parser = require("rss-parser");
+const { scraper } = require("./scrape");
 
 const parser = new Parser();
 
@@ -84,13 +85,14 @@ const fetchHackerNews = async (keyword) => {
     const response = await axios.get(SOURCES.hackerNews, {
       params: { query: keyword, tags: "story" },
     });
-    return response.data.hits.map((item) => ({
+    const promises = response.data.hits.map(async (item) => ({
       Source: "Hacker News",
       Title: item.title,
       Link: item.url,
       Date: new Date().toLocaleDateString("en-US", DATEOPTIONS),
-      Summary: item.story_text ? item.story_text.substring(0, 200) + "..." : "",
+      Summary: await scraper(item.url),
     }));
+    return Promise.all(promises);
   } catch (error) {
     console.error("Error fetching from Hacker News:", error.message);
     return [];
@@ -154,6 +156,7 @@ const fetchData = async () => {
 
     writableStream.on("finish", () => {
       console.log(`${newResults.length} new results saved to ${OUTPUTDIR}`);
+      process.exit(0);
     });
 
     csvStream.pipe(writableStream);
