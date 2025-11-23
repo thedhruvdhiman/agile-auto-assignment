@@ -67,8 +67,7 @@ const fetchReddit = async (keyword) => {
       Summary: item.data.selftext ? item.data.selftext : "",
     }));
   } catch (error) {
-    console.error("Error fetching from Reddit:", error.message);
-    return [];
+    throw new Error("Error fetching from Reddit:", error.message);
   }
 };
 
@@ -88,8 +87,7 @@ const fetchHackerNews = async (keyword) => {
       Summary: item.story_text ? item.story_text : "",
     }));
   } catch (error) {
-    console.error("Error fetching from Hacker News:", error.message);
-    return [];
+    throw new Error("Error fetching from Hacker News:", error.message);
   }
 };
 
