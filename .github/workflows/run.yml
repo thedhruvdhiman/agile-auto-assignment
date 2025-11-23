@@ -25,9 +25,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version: "22"
       - name: Install Dependencies
         run: npm install
       - name: Run Script
         run: |
-          npm run ${{inputs.provider}} ${{inputs.topic}}
+          npm run start ${{inputs.provider}} ${{inputs.topic}}
