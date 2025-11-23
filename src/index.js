@@ -56,24 +56,18 @@ const readExistingLinks = () => {
 const fetchReddit = async (keyword) => {
   try {
     console.log(`Fetching Reddit for "${keyword}"...`);
-    const response = await axios.get(SOURCES.reddit, {
-      params: { q: keyword, sort: "new" },
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        Referer: "https://www.google.com/",
-      },
-    });
-    return response.data.data.children.map((item) => ({
+    const feedUrl = `https://www.reddit.com/search.rss?q=${encodeURIComponent(
+      keyword
+    )}&sort=new`;
+    const feed = await parser.parseURL(feedUrl);
+
+    return feed.items.map((item) => ({
       Source: "Reddit",
-      Title: item.data.title,
-      Link: `https://www.reddit.com${item.data.permalink}`,
+      Title: item.title,
+      Link: item.link,
       Date: new Date().toLocaleDateString("en-US", DATEOPTIONS),
-      Summary: item.data.selftext
-        ? item.data.selftext.substring(0, 200) + "..."
+      Summary: item.contentSnippet
+        ? item.contentSnippet.substring(0, 200) + "..."
         : "",
     }));
   } catch (error) {
