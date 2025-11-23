@@ -1,6 +1,4 @@
-# News Aggregator Project!!! 🚀
-
-Hi everyone! 👋 This is a project I made to help me find news about stuff I like without searching everywhere manually. It looks at Reddit, Hacker News, and Google News for me.
+# News Aggregator Project!!! 🐶
 
 ## What it does
 
