@@ -1,0 +1,51 @@
+name: Daily News Aggregator
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # Runs at 9:00 AM UTC every day
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: "Provider to search"
+        required: true
+        type: choice
+        default: "all"
+        options:
+          - reddit
+          - hackerNews
+          - googleNews
+          - all
+      topic:
+        description: "Topic to search"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  aggregate-news:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run aggregator script
+        run: node src/index.js ${{inputs.provider}} ${{inputs.topic}}
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add report/*.csv
+          git commit -m "Update daily news report" || echo "No changes to commit"
+          git push

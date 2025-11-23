@@ -2,7 +2,9 @@ const axios = require("axios");
 const csv = require("fast-csv");
 const fs = require("fs");
 const path = require("path");
-const { parse } = require("fast-csv");
+const Parser = require("rss-parser");
+
+const parser = new Parser();
 
 const DATEOPTIONS = {
   year: "numeric",
@@ -10,9 +12,10 @@ const DATEOPTIONS = {
   day: "numeric",
 };
 
-const KEYWORD = process.argv[3];
+const KEYWORD = process.argv[3] || "AI automation"; // Default keyword if not provided
 const SOURCES = {
   reddit: "https://www.reddit.com/search.json",
+  googleNews: "https://news.google.com/rss/search",
   hackerNews: "http://hn.algolia.com/api/v1/search",
 };
 
@@ -25,25 +28,24 @@ const OUTPUT_FILE_DATE = {
 const OUTPUT_FILE =
   new Date().toLocaleDateString("en-US", OUTPUT_FILE_DATE).replace(" ", "_") +
   "_" +
-  process.argv[3] +
+  KEYWORD.replace(" ", "_") +
   "_news.csv";
 
 const REPORT_DIR = path.join(__dirname + "/../report");
 const OUTPUTDIR = path.join(REPORT_DIR, OUTPUT_FILE);
 
-let set = new Set();
+let existingLinks = new Set();
 
 // Function to read existing links from CSV to avoid duplicates
-const readset = () => {
+const readExistingLinks = () => {
   return new Promise((resolve) => {
     if (!fs.existsSync(OUTPUTDIR)) {
       return resolve();
     }
     fs.createReadStream(OUTPUTDIR)
-      // .pipe(parse())
-      .pipe(csv.parse({ headers: true })) // exclude the headers
+      .pipe(csv.parse({ headers: true }))
       .on("error", (error) => console.error(error))
-      .on("data", (row) => set.add(row.Link))
+      .on("data", (row) => existingLinks.add(row.Link))
       .on("end", (rowCount) => {
         console.log(`Read ${rowCount} existing entries.`);
         resolve();
@@ -53,6 +55,7 @@ const readset = () => {
 
 const fetchReddit = async (keyword) => {
   try {
+    console.log(`Fetching Reddit for "${keyword}"...`);
     const response = await axios.get(SOURCES.reddit, {
       params: { q: keyword, sort: "new" },
       headers: {
@@ -64,15 +67,19 @@ const fetchReddit = async (keyword) => {
       Title: item.data.title,
       Link: `https://www.reddit.com${item.data.permalink}`,
       Date: new Date().toLocaleDateString("en-US", DATEOPTIONS),
-      Summary: item.data.selftext ? item.data.selftext : "",
+      Summary: item.data.selftext
+        ? item.data.selftext.substring(0, 200) + "..."
+        : "",
     }));
   } catch (error) {
-    throw new Error("Error fetching from Reddit:", error.message);
+    console.error("Error fetching from Reddit:", error.message);
+    return [];
   }
 };
 
 const fetchHackerNews = async (keyword) => {
   try {
+    console.log(`Fetching Hacker News for "${keyword}"...`);
     const response = await axios.get(SOURCES.hackerNews, {
       params: { query: keyword, tags: "story" },
       headers: {
@@ -84,51 +91,71 @@ const fetchHackerNews = async (keyword) => {
       Title: item.title,
       Link: item.url,
       Date: new Date().toLocaleDateString("en-US", DATEOPTIONS),
-      Summary: item.story_text ? item.story_text : "",
+      Summary: item.story_text ? item.story_text.substring(0, 200) + "..." : "",
     }));
   } catch (error) {
-    throw new Error("Error fetching from Hacker News:", error.message);
+    console.error("Error fetching from Hacker News:", error.message);
+    return [];
+  }
+};
+
+const fetchGoogleNews = async (keyword) => {
+  try {
+    console.log(`Fetching Google News for "${keyword}"...`);
+    const feedUrl = `${SOURCES.googleNews}?q=${encodeURIComponent(
+      keyword
+    )}&hl=en-US&gl=US&ceid=US:en`;
+    const feed = await parser.parseURL(feedUrl);
+
+    return feed.items.map((item) => ({
+      Source: "Google News",
+      Title: item.title,
+      Link: item.link,
+      Date: new Date().toLocaleDateString("en-US", DATEOPTIONS),
+      Summary: item.contentSnippet
+        ? item.contentSnippet.substring(0, 200) + "..."
+        : "",
+    }));
+  } catch (error) {
+    console.error("Error fetching from Google News:", error.message);
+    return [];
   }
 };
 
 const fetchData = async () => {
-  console.log("Fetching data...");
+  console.log(`Starting data fetch for keyword: ${KEYWORD}`);
   let allResults = [];
 
-  if (sourceName === "reddit") {
-    allResults = await fetchReddit(KEYWORD);
-  } else if (sourceName === "hackerNews") {
-    allResults = await fetchHackerNews(KEYWORD);
-  } else if (sourceName === "all") {
-    allResults = allResults.concat(
-      await fetchReddit(KEYWORD),
-      await fetchHackerNews(KEYWORD)
-    );
-  } else {
-    // do nothing
-  }
+  const fetchers = [];
+  if (sourceName === "reddit" || sourceName === "all")
+    fetchers.push(fetchReddit(KEYWORD));
+  if (sourceName === "hackerNews" || sourceName === "all")
+    fetchers.push(fetchHackerNews(KEYWORD));
+  if (sourceName === "googleNews" || sourceName === "all")
+    fetchers.push(fetchGoogleNews(KEYWORD));
 
-  // for (const keyword of KEYWORD) {
-  //     const redditResults = await fetchReddit(keyword);
-  //     const hackerNewsResults = await fetchHackerNews(keyword);
-  //     allResults = allResults.concat(redditResults, hackerNewsResults);
-  // }
+  const results = await Promise.allSettled(fetchers);
+  results.forEach((res) => (allResults = allResults.concat(res)));
 
+  // Filter duplicates
   const newResults = allResults.filter(
-    (item) => item.Link && !set.has(item.Link)
+    (item) => item.Link && !existingLinks.has(item.Link)
   );
 
   if (newResults.length > 0) {
-    newResults.forEach((item) => set.add(item.Link));
+    newResults.forEach((item) => existingLinks.add(item.Link));
+
     const csvStream = csv.format({
-      headers: true,
-      append: fs.existsSync(OUTPUTDIR),
+      headers: !fs.existsSync(OUTPUTDIR),
+      includeEndRowDelimiter: true,
     });
+
     const writableStream = fs.createWriteStream(OUTPUTDIR, { flags: "a" });
 
     writableStream.on("finish", () => {
       console.log(`${newResults.length} new results saved to ${OUTPUTDIR}`);
     });
+
     csvStream.pipe(writableStream);
     newResults.forEach((result) => csvStream.write(result));
     csvStream.end();
@@ -138,12 +165,10 @@ const fetchData = async () => {
 };
 
 // Initial run
-
-// npm run reddit "Blockchain"
 (async () => {
   if (!fs.existsSync(REPORT_DIR)) {
     fs.mkdirSync(REPORT_DIR, { recursive: true });
   }
-  await readset();
+  await readExistingLinks();
   await fetchData();
 })();
