@@ -28,7 +28,7 @@ const OUTPUT_FILE_DATE = {
 const OUTPUT_FILE =
   new Date().toLocaleDateString("en-US", OUTPUT_FILE_DATE).replace(" ", "_") +
   "_" +
-  KEYWORD.replace(" ", "_") +
+  KEYWORD.replace(/ /g, "_") +
   "_news.csv";
 
 const REPORT_DIR = path.join(__dirname + "/../report");
@@ -59,7 +59,8 @@ const fetchReddit = async (keyword) => {
     const response = await axios.get(SOURCES.reddit, {
       params: { q: keyword, sort: "new" },
       headers: {
-        "User-Agent": "node:data_aggregation:v1.0.0",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       },
     });
     return response.data.data.children.map((item) => ({
@@ -135,7 +136,11 @@ const fetchData = async () => {
     fetchers.push(fetchGoogleNews(KEYWORD));
 
   const results = await Promise.allSettled(fetchers);
-  results.forEach((res) => (allResults = allResults.concat(res)));
+  results.forEach((res) => {
+    if (res.status === "fulfilled") {
+      allResults = allResults.concat(res.value);
+    }
+  });
 
   // Filter duplicates
   const newResults = allResults.filter(
