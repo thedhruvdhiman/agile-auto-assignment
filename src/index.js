@@ -14,7 +14,7 @@ const DATEOPTIONS = {
 
 const KEYWORD = process.argv[3] || "AI automation"; // Default keyword if not provided
 const SOURCES = {
-  reddit: "https://www.reddit.com/search.json",
+  reddit: "https://www.reddit.com/search.rss",
   googleNews: "https://news.google.com/rss/search",
   hackerNews: "http://hn.algolia.com/api/v1/search",
 };
@@ -56,24 +56,20 @@ const readExistingLinks = () => {
 const fetchReddit = async (keyword) => {
   try {
     console.log(`Fetching Reddit for "${keyword}"...`);
-    const response = await axios.get(SOURCES.reddit, {
-      params: { q: keyword, sort: "new" },
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        Referer: "https://www.google.com/",
-      },
-    });
-    return response.data.data.children.map((item) => ({
+    // const feedUrl = `https://www.reddit.com/search.rss?q=${encodeURIComponent(
+    //   keyword
+    // )}&sort=new`;
+    const feedURL = `${SOURCES.reddit}?q=${keyword}&sort=new`;
+    // const feedUrl = `https://www.reddit.com/search.rss?q=${keyword}&sort=new`;
+    const feed = await parser.parseURL(feedURL);
+
+    return feed.items.map((item) => ({
       Source: "Reddit",
-      Title: item.data.title,
-      Link: `https://www.reddit.com${item.data.permalink}`,
+      Title: item.title,
+      Link: item.link,
       Date: new Date().toLocaleDateString("en-US", DATEOPTIONS),
-      Summary: item.data.selftext
-        ? item.data.selftext.substring(0, 200) + "..."
+      Summary: item.contentSnippet
+        ? item.contentSnippet.substring(0, 200) + "..."
         : "",
     }));
   } catch (error) {
@@ -87,9 +83,6 @@ const fetchHackerNews = async (keyword) => {
     console.log(`Fetching Hacker News for "${keyword}"...`);
     const response = await axios.get(SOURCES.hackerNews, {
       params: { query: keyword, tags: "story" },
-      headers: {
-        "User-Agent": "node:data_aggregation:v1.0.0",
-      },
     });
     return response.data.hits.map((item) => ({
       Source: "Hacker News",
@@ -107,9 +100,7 @@ const fetchHackerNews = async (keyword) => {
 const fetchGoogleNews = async (keyword) => {
   try {
     console.log(`Fetching Google News for "${keyword}"...`);
-    const feedUrl = `${SOURCES.googleNews}?q=${encodeURIComponent(
-      keyword
-    )}&hl=en-US&gl=US&ceid=US:en`;
+    const feedUrl = `${SOURCES.googleNews}?q=${keyword}`;
     const feed = await parser.parseURL(feedUrl);
 
     return feed.items.map((item) => ({
