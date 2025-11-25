@@ -2,7 +2,7 @@ name: Daily News Aggregator
 
 on:
   schedule:
-    - cron: "0 8 * * *" # Runs at 9:00 AM UTC every day
+    - cron: "0 8 * * *"
   workflow_dispatch:
     inputs:
       provider:
@@ -48,3 +48,18 @@ jobs:
         with:
           name: news-report
           path: report/*.csv
+
+  # teams-message:
+  #   uses: ./.github/workflows/teams_message.yml
+  #   with:
+  #     TEAMS_WEBHOOK_URL:
+  #     GITHUB_RUN_ID: ${{ github.run_id }}
+  #     TOPIC: ${{ inputs.topic }}
+
+  discord-message:
+    needs: aggregate-news
+    uses: ./.github/workflows/discord_message.yml
+    with:
+      DISCORD_WEBHOOK_URL: https://discord.com/api/webhooks/1442941704285192356/ggvu-RLfdxsN5pmWz3yEfkD280zWhUGGIr6kY6qfMp61HKGXXlxC6QuwnZ29aFFA9Orp
+      GITHUB_RUN_ID: ${{ github.run_id }}
+      TOPIC: ${{ inputs.topic }}
