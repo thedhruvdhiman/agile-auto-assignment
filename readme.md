@@ -4,6 +4,8 @@
 
 It searches for a keyword (like "AI" or "Cats") and saves all the links it finds into a CSV file in the `report` folder. It also checks if the link is already there so it doesn't save it twice!
 
+At the end user will be send a discord message pointing to the link of the workflow run with the generated report!
+
 ## How to run it on your computer
 
 1. Make sure you have Node.js installed. "I think any version is fine"
@@ -38,3 +40,4 @@ npm run start googleNews "cats"
 - `axios` (for fetching data)
 - `fast-csv` (to make the excel file thingy)
 - `rss-parser` (to read the RSS feeds)
+- `cheerio` (to scrape HTML data from RSS feed)
