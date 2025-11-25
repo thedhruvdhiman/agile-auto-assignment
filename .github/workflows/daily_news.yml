@@ -1,4 +1,4 @@
-name: Daily News Aggregator
+name: Daily News
 
 on:
   schedule:
