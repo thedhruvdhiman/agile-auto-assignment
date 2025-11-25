@@ -19,4 +19,4 @@ jobs:
     steps:
       - name: Post to Discord Channel
         run: |
-          curl -H "Content-Type: application/json" -X POST ${{inputs.DISCORD_WEBHOOK_URL}} -d '{"content": "✅ **Report**\nLatest News for **${{inputs.TOPIC}}** fetched successfully.\nRun ID: "https://github.com/thedhruvdhiman/agile-auto-assignment/actions/runs/${{inputs.GITHUB_RUN_ID}}"}'
+          curl -H "Content-Type: application/json" -X POST ${{inputs.DISCORD_WEBHOOK_URL}} -d '{"content": "✅ **Report**\nLatest News for **${{inputs.TOPIC}}** fetched successfully.\nRun ID: https://github.com/thedhruvdhiman/agile-auto-assignment/actions/runs/${{inputs.GITHUB_RUN_ID}}"}'
