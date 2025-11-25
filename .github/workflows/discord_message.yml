@@ -1,0 +1,22 @@
+name: Discord Message
+
+on:
+  workflow_call:
+    inputs:
+      DISCORD_WEBHOOK_URL:
+        required: true
+        type: string
+      GITHUB_RUN_ID:
+        required: true
+        type: string
+      TOPIC:
+        required: true
+        type: string
+
+jobs:
+  post_discord:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Discord Channel
+        run: |
+          curl -H "Content-Type: application/json" -X POST ${{inputs.DISCORD_WEBHOOK_URL}} -d '{"content": "✅ **Report**\nLatest News for **${{inputs.TOPIC}}** fetched successfully.\nRun ID: https://github.com/thedhruvdhiman/agile-auto-assignment/actions/runs/${{inputs.GITHUB_RUN_ID}}"}'
